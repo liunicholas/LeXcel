@@ -18,7 +18,7 @@ function getSheetData() {
 }
 
 function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
-  var apiKey = ""
+  var apiKey = PropertiesService.getScriptProperties().getProperty("OPENAI_API_KEY");
   var url = "https://api.openai.com/v1/chat/completions";
 
   var payload = {
@@ -26,7 +26,7 @@ function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
     messages: [
       {
         role: "system",
-        content: "You are an excel specialist that only returns google sheet formulas as you would type them in google sheet, do not include extra syntax. " +
+        content: "You are an excel specialist that only returns google sheet formulas as you would type them in google sheet, do not include extra syntax. Please only use formulas that apply to one single cell. " +
                  "Write me an excel formula to do the following, only return the formula with the = sign."
       },
       { 

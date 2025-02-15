@@ -1,7 +1,14 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeXcel Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css">
+
     <style>
         body {
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -44,31 +51,50 @@
             color: #7C3AED;
         }
 
-        .input-container {
+        #text-input-container {
             display: flex;
             gap: 8px;
-            margin-bottom: 10px;
             width: 100%;
-        }
-
-        input,
-        textarea {
-            flex: 1;
-            padding: 8px 12px;
+            padding: 10px;
             border: 1px solid #E5E7EB;
             border-radius: 6px;
             background-color: white;
-            color: #2D2D2D;
-            font-family: inherit;
-            font-size: 14px;
-            min-width: 0;
+            align-items: center;
+            min-height: 40px;
         }
 
-        input:focus,
-        textarea:focus {
+        #user-text {
+            flex-grow: 1;
+            border: none;
             outline: none;
-            border-color: #7C3AED;
-            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
+            font-size: 14px;
+            min-height: 40px;
+            overflow-y: auto;
+            white-space: nowrap;
+        }
+
+        .tag {
+            display: inline-flex;
+            align-items: center;
+            background-color: #EDE9FE;
+            color: #7C3AED;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 2px;
+            font-size: 14px;
+        }
+
+        .tag .remove-btn {
+            margin-left: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #6D28D9;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
         }
 
         button {
@@ -78,7 +104,6 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            font-family: inherit;
             font-size: 14px;
             font-weight: 500;
             transition: background-color 0.2s;
@@ -87,22 +112,6 @@
 
         button:hover {
             background-color: #6D28D9;
-        }
-
-        ::placeholder {
-            color: #9CA3AF;
-        }
-
-        textarea {
-            resize: vertical;
-            min-height: 50px;
-            max-height: 150px;
-        }
-
-        .status {
-            font-size: 13px;
-            color: #6D28D9;
-            margin-top: 10px;
         }
 
         .processing {
@@ -144,148 +153,111 @@
                 opacity: 0.3;
             }
         }
-
-        .formula {
-            background-color: #F9F9FB;
-            padding: 6px 12px;
-            border-radius: 5px;
-            font-family: monospace;
-            display: inline-block;
-            color: #2D2D2D;
-        }
-
-        .selected-range {
-            position: absolute;
-            bottom: 15px;
-            left: 15px;
-            background-color: #EDE9FE;
-            color: #7C3AED;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 13px;
-            z-index: 1;
-        }
     </style>
-    <script>
-        function sendMessage() {
-            var input = document.getElementById("user-input").value;
-            
-            // Add selected range to input if exists
-            if (window.selectedRange) {
-                input = window.selectedRange + " " + input;
-                
-                // Clear the selected range
-                var existingRange = document.querySelector('.selected-range');
-                if (existingRange) {
-                    existingRange.remove();
-                }
-                window.selectedRange = null;
-            }
-
-            var chatBox = document.getElementById("chat-box");
-
-            if (input.trim() === "") return;
-
-            chatBox.innerHTML += "<p><strong>You:</strong> " + input + "</p>";
-
-            // Create a processing bubble
-            var processingBubble = document.createElement("div");
-            processingBubble.id = "processing-bubble";
-            processingBubble.innerHTML = `
-                <div class="processing">
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                    <span class="dot"></span>
-                </div>
-            `;
-            chatBox.appendChild(processingBubble);
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            document.getElementById("user-input").value = "";
-
-            google.script.run.withSuccessHandler(function (response) {
-                // Remove processing bubble
-                processingBubble.remove();
-
-                // Format response nicely
-                chatBox.innerHTML += `<p><strong>Bot:</strong> <code class="formula">${response}</code></p>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }).processMessage(input);
-        }
-
-        document.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
-        });
-
-        function applyFormula() {
-            let range = document.getElementById("range").value;
-            let prompt = document.getElementById("prompt").value;
-            let status = document.getElementById("status");
-
-            if (!range || !prompt) {
-                alert("Please enter both a range and a prompt.");
-                return;
-            }
-
-            status.innerText = "Processing...";
-
-            google.script.run.withSuccessHandler(function (response) {
-                status.innerText = response;
-            }).applyFormulaWithAutofill(range, prompt);
-        }
-
-        function insertSelectedRange() {
-            google.script.run.withSuccessHandler(function (rangeNotation) {
-                if (rangeNotation) {
-                    var chatBox = document.getElementById("chat-box");
-                    
-                    // Remove existing range display if any
-                    var existingRange = document.querySelector('.selected-range');
-                    if (existingRange) {
-                        existingRange.remove();
-                    }
-                    
-                    // Create and add new range display
-                    var rangeDisplay = document.createElement('div');
-                    rangeDisplay.className = 'selected-range';
-                    rangeDisplay.textContent = rangeNotation;
-                    chatBox.appendChild(rangeDisplay);
-                    
-                    // Store the range for later use when sending message
-                    window.selectedRange = rangeNotation;
-                }
-            }).getSelectedRange();
-        }
-
-        document.addEventListener("keydown", function (event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
-        });
-    </script>
 </head>
 
 <body>
+
     <h3>LeXcel Assistant</h3>
 
     <div id="chat-box"></div>
 
     <div class="input-container">
-        <div style="display: flex; gap: 8px; width: 100%;">
-            <button onclick="insertSelectedRange()"
-                style="padding: 8px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB;">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 6h18M3 12h18M3 18h18"></path>
-                </svg>
-            </button>
-            <input type="text" id="user-input" placeholder="Type a message..." />
-            <button onclick="sendMessage()">Send</button>
-        </div>
+        <button onclick="insertSelectedRange()"
+            style="padding: 8px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB;">
+            📌 Insert Selected Range
+        </button>
     </div>
 
-    <p id="status" class="status"></p>
+    <div id="text-input-container">
+        <span id="user-text" contenteditable="true"></span>
+    </div>
+
+    <div class="input-container">
+        <button onclick="sendMessage()">Send</button>
+    </div>
+
+    <script>
+        let userText = document.getElementById("user-text");
+
+        function insertSelectedRange() {
+            google.script.run.withSuccessHandler(function (rangeNotation) {
+                if (rangeNotation) {
+                    let tag = document.createElement("span");
+                    tag.className = "tag";
+                    tag.textContent = `[${rangeNotation}]`;
+
+                    // Add remove button
+                    let closeButton = document.createElement("span");
+                    closeButton.className = "remove-btn";
+                    closeButton.innerHTML = "&times;";
+                    closeButton.onclick = function () {
+                        tag.remove();
+                    };
+
+                    tag.appendChild(closeButton);
+                    tag.setAttribute("contenteditable", "false"); // Make tag non-editable
+                    userText.appendChild(tag);
+                    userText.appendChild(document.createTextNode(" ")); // Ensure spacing after tag
+
+                    // Move cursor outside the tag to prevent text from extending it
+                    setTimeout(() => {
+                        const range = document.createRange();
+                        const selection = window.getSelection();
+
+                        range.setStartAfter(tag.nextSibling); // Move cursor outside the tag
+                        range.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }, 0);
+                }
+            }).getSelectedRange();
+        }
+
+
+        function sendMessage() {
+            let chatBox = document.getElementById("chat-box");
+
+            // Convert message content, replacing tags with plain text
+            let finalMessage = "";
+            userText.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    finalMessage += node.textContent;
+                } else if (node.classList.contains("tag")) {
+                    finalMessage += " " + node.textContent.replace("×", ""); // Remove "×"
+                }
+            });
+
+            // Display user message in chat
+            chatBox.innerHTML += `<p><strong>You:</strong> ${finalMessage.trim()}</p>`;
+
+            // Create a processing bubble
+            let processingBubble = document.createElement("div");
+            processingBubble.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <p style="margin: 0;"><strong>Lex:</strong></p>
+                <div class="processing">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+              </div>
+            `;
+            chatBox.appendChild(processingBubble);
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to latest message
+
+            // Clear input field after sending
+            userText.innerHTML = "";
+
+            google.script.run.withSuccessHandler(function (response) {
+                processingBubble.remove(); // Remove bubble when bot responds
+                chatBox.innerHTML += `<p><strong>Lex:</strong> ${response}</p>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }).processMessage(finalMessage.trim());
+        }
+
+    </script>
+
 </body>
 
 </html>
