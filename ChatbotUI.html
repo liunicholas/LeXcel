@@ -31,7 +31,7 @@
 
         #chat-box {
             flex: 1;
-            max-height: 400px;
+            max-height: 80vh;
             overflow-y: auto;
             border: 1px solid #E5E7EB;
             border-radius: 8px;
@@ -166,29 +166,31 @@
         .loading-spinner {
             animation: rotate 1s linear infinite;
         }
-        
+
         .loading-spinner circle {
             stroke-dasharray: 90, 150;
             stroke-dashoffset: 0;
             transform-origin: center;
             animation: dash 1.5s ease-in-out infinite;
         }
-        
+
         @keyframes rotate {
             100% {
                 transform: rotate(360deg);
             }
         }
-        
+
         @keyframes dash {
             0% {
                 stroke-dasharray: 1, 150;
                 stroke-dashoffset: 0;
             }
+
             50% {
                 stroke-dasharray: 90, 150;
                 stroke-dashoffset: -35;
             }
+
             100% {
                 stroke-dasharray: 90, 150;
                 stroke-dashoffset: -124;
@@ -206,22 +208,54 @@
     </div>
 
     <div id="text-input-container">
-        <span id="user-text" contenteditable="true" onkeydown="handleKeyPress(event)" 
+        <span id="user-text" contenteditable="true" onkeydown="handleKeyPress(event)"
             data-placeholder="Type your request"></span>
     </div>
 
     <div class="input-container">
-        <button onclick="insertSelectedRange()" 
+        <button onclick="insertSelectedRange()"
             style="padding: 8px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB;">
             📌 Insert Selected Range
         </button>
         <button onclick="sendMessage()">Send</button>
     </div>
 
+    <div id="warning-dialog" class="modal"
+        style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4);">
+        <div class="modal-content"
+            style="background-color: #fefefe; margin: 15% auto; padding: 20px; border: 1px solid #888; width: 80%; max-width: 500px; border-radius: 8px;">
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M12 7V12M12 15.5V16M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"
+                        stroke="#7C3AED" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <h4 style="margin: 0; color: #7C3AED; font-weight: 500; font-size: 18px;">Confirm Action</h4>
+            </div>
+            <p>The selected range contains non-empty cells. Do you want to continue and override the existing content?
+            </p>
+            <div style="display: flex; gap: 12px; justify-content: flex-end; width: 100%;">
+                <button onclick="cancelOverride()"
+                    style="flex: 1; padding: 8px 16px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    Cancel
+                </button>
+                <button onclick="continueWithOverride()"
+                    style="flex: 1; padding: 8px 16px; background-color: #7C3AED; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                    Continue
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let userText = document.getElementById("user-text");
+        let pendingMessage = null;
 
         function insertSelectedRange() {
+            // Disable send button
+            const sendButton = document.querySelector('button[onclick="sendMessage()"]');
+            sendButton.disabled = true;
+
             const spinner = document.createElement('span');
             spinner.innerHTML = `
                 <svg class="loading-spinner" viewBox="0 0 50 50" width="16" height="16" 
@@ -245,24 +279,27 @@
                 .withSuccessHandler(function (rangeNotation) {
                     // Remove spinner
                     document.getElementById('range-spinner')?.remove();
-                    
+
+                    // Re-enable send button
+                    sendButton.disabled = false;
+
                     if (!rangeNotation) return;
-                    
+
                     // Create elements in one go using template literal
                     const tagHTML = `<span class="tag" contenteditable="false">[${rangeNotation}]<span class="remove-btn">&times;</span></span>`;
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = tagHTML;
                     const tag = tempDiv.firstChild;
-                    
+
                     // Add event listener to remove button
                     tag.querySelector('.remove-btn').onclick = () => tag.remove();
-                    
+
                     // Insert tag and space in one operation
                     const fragment = document.createDocumentFragment();
                     fragment.appendChild(tag);
                     fragment.appendChild(document.createTextNode(" "));
                     userText.appendChild(fragment);
-                    
+
                     // Move cursor after tag directly
                     const range = document.createRange();
                     const selection = window.getSelection();
@@ -271,31 +308,40 @@
                     selection.removeAllRanges();
                     selection.addRange(range);
                 })
-                .withFailureHandler(function(error) {
+                .withFailureHandler(function (error) {
                     // Remove spinner on error too
                     document.getElementById('range-spinner')?.remove();
+                    // Re-enable send button
+                    sendButton.disabled = false;
                 })
                 .getSelectedRange();
         }
 
-        function sendMessage() {
+        function showWarningDialog() {
+            document.getElementById('warning-dialog').style.display = 'block';
+        }
+
+        function hideWarningDialog() {
+            document.getElementById('warning-dialog').style.display = 'none';
+        }
+
+        function cancelOverride() {
+            hideWarningDialog();
+            // Clear the pending message
+            pendingMessage = null;
+        }
+
+        function continueWithOverride() {
+            hideWarningDialog();
+            if (pendingMessage) {
+                // Process the message without further checks
+                processFinalMessage(pendingMessage);
+                pendingMessage = null;
+            }
+        }
+
+        function processFinalMessage(finalMessage) {
             let chatBox = document.getElementById("chat-box");
-
-            // Convert message content, replacing tags with plain text
-            let finalMessage = "";
-            userText.childNodes.forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    finalMessage += node.textContent;
-                } else if (node.classList && node.classList.contains("tag")) {
-                    finalMessage += " " + node.textContent.replace("×", ""); // Remove "×"
-                } else {
-                    // Handle any other node types (like pasted content)
-                    finalMessage += node.textContent || "";
-                }
-            });
-
-            finalMessage = finalMessage.trim();
-            if (!finalMessage) return;  // Don't send empty messages
 
             // Display user message in chat
             chatBox.innerHTML += `<p><strong>You:</strong> ${finalMessage.trim()}</p>`;
@@ -320,9 +366,146 @@
 
             google.script.run.withSuccessHandler(function (response) {
                 processingBubble.remove(); // Remove bubble when bot responds
-                chatBox.innerHTML += `<p><strong>Lex:</strong> ${response}</p>`;
+
+                try {
+                    const result = JSON.parse(response);
+
+                    if (result.error) {
+                        // Show error message with regenerate and continue buttons
+                        chatBox.innerHTML += `
+                            <div class="error-message" style="
+                                margin: 10px 0; 
+                                padding: 16px; 
+                                background-color: #FEF2F2; 
+                                border: 1px solid #FCA5A5; 
+                                border-radius: 8px;
+                                max-width: 100%;
+                                overflow-wrap: break-word;
+                            ">
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M12 7V12M12 15.5V16M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" 
+                                            stroke="#DC2626" stroke-width="2" stroke-linecap="round"/>
+                                    </svg>
+                                    <h4 style="margin: 0; color: #DC2626; font-size: 16px;">Formula Error</h4>
+                                </div>
+                                <div style="margin-bottom: 16px; color: #4B5563; font-size: 14px;">
+                                    <p style="margin: 0 0 8px 0;"><strong>Formula:</strong> <span style="font-family: monospace; background: #F3F4F6; padding: 2px 4px; border-radius: 4px;">${result.formula}</span></p>
+                                    <p style="margin: 0 0 8px 0;"><strong>Error Type:</strong> ${result.errorType}</p>
+                                    <p style="margin: 0;"><strong>Details:</strong> ${result.errorDetails}</p>
+                                </div>
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                                    <button onclick="regenerateFormula('${result.errorType}', '${result.errorDetails}')" 
+                                        style="
+                                          flex: 1;
+                                          min-width: 140px;
+                                          background-color: #F3F4F6; 
+                                          color: #4B5563;
+                                          border: 1px solid #E5E7EB;
+                                          padding: 8px 16px; 
+                                          border-radius: 6px; 
+                                          cursor: pointer;
+                                          font-size: 14px;
+                                          font-weight: 500;
+                                          transition: background-color 0.2s;   
+                                        ">
+                                        Regenerate Formula
+                                    </button>
+                                    <button onclick="applyFormulaAnyway('${result.formula}')"
+                                        style="
+                                          flex: 1;
+                                          min-width: 140px;
+                                          background-color: #DC2626; 
+                                          color: white; 
+                                          border: none; 
+                                          padding: 8px 16px; 
+                                          border-radius: 6px; 
+                                          cursor: pointer;
+                                          font-size: 14px;
+                                          font-weight: 500;
+                                          transition: background-color 0.2s;
+                                        ">
+                                        Continue Anyway
+                                    </button>
+                                </div>
+                            </div>`;
+                    } else {
+                        chatBox.innerHTML += `<p><strong>Lex:</strong> Formula ${result.formula} applied to range ${result.range}</p>`;
+                    }
+                } catch (e) {
+                    // Handle non-JSON responses (backwards compatibility)
+                    chatBox.innerHTML += `<p><strong>Lex:</strong> ${response}</p>`;
+                }
+
                 chatBox.scrollTop = chatBox.scrollHeight;
             }).processMessage(finalMessage.trim());
+        }
+
+        function regenerateFormula(errorType, errorDetails) {
+            const regenerateMessage = `The previous formula resulted in ${errorType}: ${errorDetails}. Please generate a new formula that avoids this error. Consider using error handling functions or different approaches to achieve the same result.`;
+            processFinalMessage(regenerateMessage);
+        }
+
+        function applyFormulaAnyway(formula) {
+            const message = `Apply this exact formula without any changes or error checking: ${formula}`;
+            processFinalMessage(message);
+        }
+
+        function sendMessage() {
+            let chatBox = document.getElementById("chat-box");
+
+            // Convert message content, replacing tags with plain text
+            let finalMessage = "";
+            userText.childNodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    finalMessage += node.textContent;
+                } else if (node.classList && node.classList.contains("tag")) {
+                    finalMessage += " " + node.textContent.replace("×", ""); // Remove "×"
+                } else {
+                    // Handle any other node types (like pasted content)
+                    finalMessage += node.textContent || "";
+                }
+            });
+
+            finalMessage = finalMessage.trim();
+            if (!finalMessage) return;  // Don't send empty messages
+
+            // Create a processing bubble
+            let checkingBubble = document.createElement("div");
+            checkingBubble.innerHTML = `
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <p style="margin: 0;"><strong>Lex:</strong></p>
+                <div class="processing">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+              </div>
+            `;
+            chatBox.appendChild(checkingBubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // Check if range has content before proceeding
+            google.script.run
+                .withSuccessHandler(function (result) {
+                    // Remove the checking bubble
+                    checkingBubble.remove();
+
+                    if (!result.isEmpty) {
+                        // Store the message and show warning
+                        pendingMessage = finalMessage;
+                        showWarningDialog();
+                    } else {
+                        // Process message immediately if range is empty
+                        processFinalMessage(finalMessage);
+                    }
+                })
+                .withFailureHandler(function (error) {
+                    // Remove the checking bubble on error
+                    checkingBubble.remove();
+                    console.error('Failed to check range:', error);
+                })
+                .checkRangeIsEmpty();
         }
 
         function handleKeyPress(event) {
@@ -330,7 +513,7 @@
                 event.preventDefault();
                 sendMessage();
             }
-            
+
             // Check if the content is empty (only whitespace or <br> tags)
             setTimeout(() => {
                 const content = userText.innerHTML.trim();
