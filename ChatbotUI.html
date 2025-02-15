@@ -46,11 +46,12 @@
         .input-container {
             display: flex;
             gap: 8px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             width: 100%;
         }
 
-        #user-input {
+        input,
+        textarea {
             flex: 1;
             padding: 8px 12px;
             border: 1px solid #E5E7EB;
@@ -62,7 +63,8 @@
             min-width: 0;
         }
 
-        #user-input:focus {
+        input:focus,
+        textarea:focus {
             outline: none;
             border-color: #7C3AED;
             box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
@@ -89,6 +91,18 @@
         ::placeholder {
             color: #9CA3AF;
         }
+
+        textarea {
+            resize: vertical;
+            min-height: 50px;
+            max-height: 150px;
+        }
+
+        .status {
+            font-size: 13px;
+            color: #6D28D9;
+            margin-top: 10px;
+        }
     </style>
     <script>
         function sendMessage() {
@@ -106,6 +120,23 @@
             }).processMessage(input);
         }
 
+        function applyFormula() {
+            let range = document.getElementById("range").value;
+            let prompt = document.getElementById("prompt").value;
+            let status = document.getElementById("status");
+
+            if (!range || !prompt) {
+                alert("Please enter both a range and a prompt.");
+                return;
+            }
+
+            status.innerText = "Processing...";
+
+            google.script.run.withSuccessHandler(function (response) {
+                status.innerText = response;
+            }).applyFormulaWithAutofill(range, prompt);
+        }
+
         document.addEventListener("keydown", function (event) {
             if (event.key === "Enter") {
                 sendMessage();
@@ -116,11 +147,15 @@
 
 <body>
     <h3>LeXcel Assistant</h3>
+
     <div id="chat-box"></div>
+
     <div class="input-container">
         <input type="text" id="user-input" placeholder="Type a message..." />
         <button onclick="sendMessage()">Send</button>
     </div>
+
+    <p id="status" class="status"></p>
 </body>
 
 </html>

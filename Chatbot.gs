@@ -68,22 +68,110 @@ function processMessage(message) {
   var cellValues = activeRange.getValues();
   var cellValuesString = cellValues.map(row => row.join(", ")).join("; ");
 
-  // Call the GPT API to generate a formula
-  var formula = single_cell_formula(userPrompt, rangeNotation, cellValuesString);
+  // var outputCellAddress = Browser.inputBox('Enter the cell address (e.g., A5) or range (e.g. A5:A10) where you want the formula to be placed:');
+
+  // // Validate range
+  // if (!outputCellAddress || outputCellAddress.trim() === "") {
+  //   return "Error: Please enter a valid cell range.";
+  // }
   
-  // Ensure the formula begins with "=" so Sheets treats it as a formula.
+  // var range;
+  // try {
+  //   range = sheet.getRange(outputCellAddress);
+  // } catch (e) {
+  //   return "Error: Invalid range format.";
+  // }
+
+  var numRows = activeRange.getNumRows();
+  var numCols = activeRange.getNumColumns();
+
+  if (numRows === 0 || numCols === 0) {
+    return "Error: The selected range is empty.";
+  }
+
+  // Select the first cell in the range
+  var firstCell = activeRange.getCell(1, 1);
+  if (!firstCell) {
+    return "Error: Could not determine the first cell in the range.";
+  }
+
+  var firstCellNotation = firstCell.getA1Notation();
+  
+  // Get data from surrounding cells
+  var surroundingData = sheet.getDataRange().getValues();
+  var cellValuesString = surroundingData.map(row => row.join(", ")).join("; ");
+  
+  // Generate the formula using AI
+  var formula = single_cell_formula(userPrompt, firstCellNotation, cellValuesString);
+
   if (!formula.startsWith('=')) {
     formula = '=' + formula;
   }
-  
-  // Ask the user for the target cell address using an input box.
-  var outputCellAddress = Browser.inputBox('Enter the cell address (e.g., A5) where you want the formula to be placed:');
-  
-  // Write the formula to the specified cell.
-  sheet.getRange(outputCellAddress).setFormula(formula);
-  
-  return "Formula applied to " + outputCellAddress + ": " + formula;
 
-  // Other message processing logic can go here.
+  // Apply formula to the first cell
+  firstCell.setFormula(formula);
+
+  // Autofill the rest of the range
+  if (numRows > 1 || numCols > 1) {
+    var autofillRange = sheet.getRange(rangeNotation);
+    firstCell.autoFill(autofillRange, SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+    return autofillRange;
+  }
+
+  return "Formula applied to " + firstCellNotation + " and autofilled to " + rangeNotation;
 }
+
+function applyFormulaWithAutofill(rangeNotation, userPrompt) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  
+  // Validate range
+  if (!rangeNotation || rangeNotation.trim() === "") {
+    return "Error: Please enter a valid cell range.";
+  }
+  
+  var range;
+  try {
+    range = sheet.getRange(rangeNotation);
+  } catch (e) {
+    return "Error: Invalid range format.";
+  }
+
+  var numRows = range.getNumRows();
+  var numCols = range.getNumColumns();
+
+  if (numRows === 0 || numCols === 0) {
+    return "Error: The selected range is empty.";
+  }
+
+  // Select the first cell in the range
+  var firstCell = range.getCell(1, 1);
+  if (!firstCell) {
+    return "Error: Could not determine the first cell in the range.";
+  }
+
+  var firstCellNotation = firstCell.getA1Notation();
+  
+  // Get data from surrounding cells
+  var surroundingData = sheet.getDataRange().getValues();
+  var cellValuesString = surroundingData.map(row => row.join(", ")).join("; ");
+  
+  // Generate the formula using AI
+  var formula = single_cell_formula(userPrompt, firstCellNotation, cellValuesString);
+
+  if (!formula.startsWith('=')) {
+    formula = '=' + formula;
+  }
+
+  // Apply formula to the first cell
+  firstCell.setFormula(formula);
+
+  // Autofill the rest of the range
+  if (numRows > 1 || numCols > 1) {
+    var autofillRange = sheet.getRange(firstCellNotation + ":" + rangeNotation);
+    firstCell.autoFill(autofillRange, SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
+  }
+
+  return "Formula applied to " + firstCellNotation + " and autofilled to " + rangeNotation;
+}
+
 
