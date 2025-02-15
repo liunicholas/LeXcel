@@ -81,7 +81,7 @@
             align-items: center;
             background-color: #EDE9FE;
             color: #7C3AED;
-            padding: 4px 8px;
+            padding: 0px 6px;
             border-radius: 4px;
             margin: 2px;
             font-size: 14px;
@@ -162,6 +162,38 @@
             color: #9CA3AF;
             pointer-events: none;
         }
+
+        .loading-spinner {
+            animation: rotate 1s linear infinite;
+        }
+        
+        .loading-spinner circle {
+            stroke-dasharray: 90, 150;
+            stroke-dashoffset: 0;
+            transform-origin: center;
+            animation: dash 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes rotate {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @keyframes dash {
+            0% {
+                stroke-dasharray: 1, 150;
+                stroke-dashoffset: 0;
+            }
+            50% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -35;
+            }
+            100% {
+                stroke-dasharray: 90, 150;
+                stroke-dashoffset: -124;
+            }
+        }
     </style>
 </head>
 
@@ -190,33 +222,60 @@
         let userText = document.getElementById("user-text");
 
         function insertSelectedRange() {
-            google.script.run.withSuccessHandler(function (rangeNotation) {
-                if (!rangeNotation) return;
-                
-                // Create elements in one go using template literal
-                const tagHTML = `<span class="tag" contenteditable="false">[${rangeNotation}]<span class="remove-btn">&times;</span></span>`;
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = tagHTML;
-                const tag = tempDiv.firstChild;
-                
-                // Add event listener to remove button
-                tag.querySelector('.remove-btn').onclick = () => tag.remove();
-                
-                // Insert tag and space in one operation
-                const fragment = document.createDocumentFragment();
-                fragment.appendChild(tag);
-                fragment.appendChild(document.createTextNode(" "));
-                userText.appendChild(fragment);
-                
-                // Move cursor after tag directly
-                const range = document.createRange();
-                const selection = window.getSelection();
-                range.setStartAfter(tag.nextSibling);
-                range.collapse(true);
-                selection.removeAllRanges();
-                selection.addRange(range);
-                
-            }).getSelectedRange();
+            const spinner = document.createElement('span');
+            spinner.innerHTML = `
+                <svg class="loading-spinner" viewBox="0 0 50 50" width="16" height="16" 
+                    style="vertical-align: middle; margin: 0 2px; position: relative; top: -1px;">
+                    <circle cx="25" cy="25" r="20" fill="none" stroke="#7C3AED" stroke-width="5"></circle>
+                </svg>
+            `;
+            spinner.style.cssText = 'display: inline; white-space: nowrap;';
+            spinner.id = 'range-spinner';
+
+            // Get selection and create proper range
+            const selection = window.getSelection();
+            const range = selection.getRangeAt(0) || document.createRange();
+            range.collapse(false);
+            range.insertNode(spinner);
+
+            // Clear the selection
+            selection.removeAllRanges();
+
+            google.script.run
+                .withSuccessHandler(function (rangeNotation) {
+                    // Remove spinner
+                    document.getElementById('range-spinner')?.remove();
+                    
+                    if (!rangeNotation) return;
+                    
+                    // Create elements in one go using template literal
+                    const tagHTML = `<span class="tag" contenteditable="false">[${rangeNotation}]<span class="remove-btn">&times;</span></span>`;
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = tagHTML;
+                    const tag = tempDiv.firstChild;
+                    
+                    // Add event listener to remove button
+                    tag.querySelector('.remove-btn').onclick = () => tag.remove();
+                    
+                    // Insert tag and space in one operation
+                    const fragment = document.createDocumentFragment();
+                    fragment.appendChild(tag);
+                    fragment.appendChild(document.createTextNode(" "));
+                    userText.appendChild(fragment);
+                    
+                    // Move cursor after tag directly
+                    const range = document.createRange();
+                    const selection = window.getSelection();
+                    range.setStartAfter(tag.nextSibling);
+                    range.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                })
+                .withFailureHandler(function(error) {
+                    // Remove spinner on error too
+                    document.getElementById('range-spinner')?.remove();
+                })
+                .getSelectedRange();
         }
 
         function sendMessage() {

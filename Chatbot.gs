@@ -175,9 +175,7 @@ function applyFormulaWithAutofill(rangeNotation, userPrompt) {
 }
 
 function getSelectedRange() {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var range = sheet.getActiveRange();
-    return range ? range.getA1Notation() : null;
+    return SpreadsheetApp.getActiveRange()?.getA1Notation() ?? null;
 }
 
 
