@@ -4,25 +4,90 @@
 <head>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            padding: 10px;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            padding: 20px;
+            background-color: #FAF9F7;
+            color: #2D2D2D;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h3 {
+            margin: 0 0 15px 0;
+            color: #7C3AED;
+            font-weight: 500;
         }
 
         #chat-box {
-            height: 300px;
+            flex: 1;
+            max-height: 400px;
             overflow-y: auto;
-            border: 1px solid #ddd;
-            padding: 10px;
-            margin-bottom: 10px;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: white;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        #chat-box p {
+            margin: 8px 0;
+            line-height: 1.5;
+        }
+
+        #chat-box strong {
+            color: #7C3AED;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            width: 100%;
         }
 
         #user-input {
-            width: calc(100% - 60px);
-            padding: 5px;
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #E5E7EB;
+            border-radius: 6px;
+            background-color: white;
+            color: #2D2D2D;
+            font-family: inherit;
+            font-size: 14px;
+            min-width: 0;
+        }
+
+        #user-input:focus {
+            outline: none;
+            border-color: #7C3AED;
+            box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.1);
         }
 
         button {
-            padding: 5px;
+            padding: 8px 16px;
+            background-color: #7C3AED;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        button:hover {
+            background-color: #6D28D9;
+        }
+
+        ::placeholder {
+            color: #9CA3AF;
         }
     </style>
     <script>
@@ -50,10 +115,12 @@
 </head>
 
 <body>
-    <h3>Chatbot Assistant</h3>
+    <h3>LeXcel Assistant</h3>
     <div id="chat-box"></div>
-    <input type="text" id="user-input" placeholder="Ask something..." />
-    <button onclick="sendMessage()">Send</button>
+    <div class="input-container">
+        <input type="text" id="user-input" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
 </body>
 
 </html>
