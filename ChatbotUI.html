@@ -32,6 +32,7 @@
             margin-bottom: 15px;
             background-color: white;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            position: relative;
         }
 
         #chat-box p {
@@ -103,22 +104,120 @@
             color: #6D28D9;
             margin-top: 10px;
         }
+
+        .processing {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: #EDE9FE;
+            border-radius: 10px;
+            width: fit-content;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            background-color: #7C3AED;
+            border-radius: 50%;
+            animation: blink 1.4s infinite;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blink {
+            0% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0.3;
+            }
+        }
+
+        .formula {
+            background-color: #F9F9FB;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-family: monospace;
+            display: inline-block;
+            color: #2D2D2D;
+        }
+
+        .selected-range {
+            position: absolute;
+            bottom: 15px;
+            left: 15px;
+            background-color: #EDE9FE;
+            color: #7C3AED;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 13px;
+            z-index: 1;
+        }
     </style>
     <script>
         function sendMessage() {
             var input = document.getElementById("user-input").value;
+            
+            // Add selected range to input if exists
+            if (window.selectedRange) {
+                input = window.selectedRange + " " + input;
+                
+                // Clear the selected range
+                var existingRange = document.querySelector('.selected-range');
+                if (existingRange) {
+                    existingRange.remove();
+                }
+                window.selectedRange = null;
+            }
+
             var chatBox = document.getElementById("chat-box");
 
             if (input.trim() === "") return;
 
             chatBox.innerHTML += "<p><strong>You:</strong> " + input + "</p>";
+
+            // Create a processing bubble
+            var processingBubble = document.createElement("div");
+            processingBubble.id = "processing-bubble";
+            processingBubble.innerHTML = `
+                <div class="processing">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            `;
+            chatBox.appendChild(processingBubble);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
             document.getElementById("user-input").value = "";
 
             google.script.run.withSuccessHandler(function (response) {
-                chatBox.innerHTML += "<p><strong>Bot:</strong> " + response + "</p>";
+                // Remove processing bubble
+                processingBubble.remove();
+
+                // Format response nicely
+                chatBox.innerHTML += `<p><strong>Bot:</strong> <code class="formula">${response}</code></p>`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             }).processMessage(input);
         }
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
 
         function applyFormula() {
             let range = document.getElementById("range").value;
@@ -138,11 +237,24 @@
         }
 
         function insertSelectedRange() {
-            google.script.run.withSuccessHandler(function(rangeNotation) {
+            google.script.run.withSuccessHandler(function (rangeNotation) {
                 if (rangeNotation) {
-                    var userInput = document.getElementById("user-input");
-                    userInput.value += rangeNotation;
-                    userInput.focus();
+                    var chatBox = document.getElementById("chat-box");
+                    
+                    // Remove existing range display if any
+                    var existingRange = document.querySelector('.selected-range');
+                    if (existingRange) {
+                        existingRange.remove();
+                    }
+                    
+                    // Create and add new range display
+                    var rangeDisplay = document.createElement('div');
+                    rangeDisplay.className = 'selected-range';
+                    rangeDisplay.textContent = rangeNotation;
+                    chatBox.appendChild(rangeDisplay);
+                    
+                    // Store the range for later use when sending message
+                    window.selectedRange = rangeNotation;
                 }
             }).getSelectedRange();
         }
@@ -162,7 +274,8 @@
 
     <div class="input-container">
         <div style="display: flex; gap: 8px; width: 100%;">
-            <button onclick="insertSelectedRange()" style="padding: 8px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB;">
+            <button onclick="insertSelectedRange()"
+                style="padding: 8px; background-color: #F3F0FF; color: #7C3AED; border: 1px solid #E5E7EB;">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M3 6h18M3 12h18M3 18h18"></path>
                 </svg>

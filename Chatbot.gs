@@ -26,12 +26,12 @@ function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
     messages: [
       {
         role: "system",
-        content: "You are an excel specialist that only returns excel formulas. " +
+        content: "You are an excel specialist that only returns google sheet formulas as you would type them in google sheet, do not include extra syntax. " +
                  "Write me an excel formula to do the following, only return the formula with the = sign."
       },
       { 
         role: "user", 
-        content: "user prompt: " + user_prompt + " range notation: " + rangeNotation + " cell values string: " + cellValuesString 
+        content: user_prompt + " The output will fall in (range notation): " + rangeNotation
       }
     ],
     max_tokens: 100
@@ -68,6 +68,7 @@ function processMessage(message) {
   var cellValues = activeRange.getValues();
   var cellValuesString = cellValues.map(row => row.join(", ")).join("; ");
 
+  
   // var outputCellAddress = Browser.inputBox('Enter the cell address (e.g., A5) or range (e.g. A5:A10) where you want the formula to be placed:');
 
   // // Validate range
@@ -115,10 +116,9 @@ function processMessage(message) {
   if (numRows > 1 || numCols > 1) {
     var autofillRange = sheet.getRange(rangeNotation);
     firstCell.autoFill(autofillRange, SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES);
-    return autofillRange;
   }
 
-  return "Formula applied to " + firstCellNotation + " and autofilled to " + rangeNotation;
+  return "Formula " + formula + " applied to " + firstCellNotation + " and autofilled to " + rangeNotation;
 }
 
 function applyFormulaWithAutofill(rangeNotation, userPrompt) {
