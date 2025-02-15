@@ -395,7 +395,7 @@
                                     <p style="margin: 0;"><strong>Details:</strong> ${result.errorDetails}</p>
                                 </div>
                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <button onclick="regenerateFormula('${result.errorType}', '${result.errorDetails}')" 
+                                    <button onclick="regenerateFormula('${result.formula}', '${result.errorType}', '${result.errorDetails}')" 
                                         style="
                                           flex: 1;
                                           min-width: 140px;
@@ -441,8 +441,8 @@
             }).processMessage(finalMessage.trim());
         }
 
-        function regenerateFormula(errorType, errorDetails) {
-            const regenerateMessage = `The previous formula resulted in ${errorType}: ${errorDetails}. Please generate a new formula that avoids this error. Consider using error handling functions or different approaches to achieve the same result.`;
+        function regenerateFormula(formula, errorType, errorDetails) {
+            const regenerateMessage = `The previous formula which was ${formula} resulted in ${errorType}: ${errorDetails}. Please generate a new formula that avoids this error. Consider using error handling functions or different approaches to achieve the same result.`;
             processFinalMessage(regenerateMessage);
         }
 

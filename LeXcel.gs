@@ -7,7 +7,7 @@ function onOpen() {
 
 function showChatbotSidebar() {
   var html =
-    HtmlService.createHtmlOutputFromFile("ChatbotUI").setTitle(
+    HtmlService.createHtmlOutputFromFile("LeXcelUI").setTitle(
       "LeXcel Assistant"
     );
   SpreadsheetApp.getUi().showSidebar(html);
@@ -29,8 +29,8 @@ function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
       {
         role: "system",
         content:
-          "You are an excel specialist that only returns google sheet formulas as you would type them in google sheet, do not include extra syntax. Please only use formulas that apply to one single cell, which generally means do not use ARRAYFORMULA" +
-          "Write me an excel formula to do the following, only return the formula with the = sign.",
+          "You are an google sheets specialist that only returns google sheet formulas as you would type them in google sheet, do not include extra syntax. Please only use formulas that apply to one single cell, which generally means do not use ARRAYFORMULA. Do NOT include any cell from the output range in the formula. " +
+          "Write me an google sheets formula to do the following, only return the formula with the = sign.",
       },
       {
         role: "user",
