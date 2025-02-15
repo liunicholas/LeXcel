@@ -174,4 +174,10 @@ function applyFormulaWithAutofill(rangeNotation, userPrompt) {
   return "Formula applied to " + firstCellNotation + " and autofilled to " + rangeNotation;
 }
 
+function getSelectedRange() {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var range = sheet.getActiveRange();
+    return range ? range.getA1Notation() : null;
+}
+
 
