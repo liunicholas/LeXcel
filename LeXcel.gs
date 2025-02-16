@@ -1,3 +1,5 @@
+var openai_key = ""
+
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("LeXcel")
@@ -19,9 +21,15 @@ function getSheetData() {
   return data;
 }
 
-function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
-  var apiKey = ""
+function single_cell_formula(user_prompt, rangeNotation, exampleCellFormat) {
   var url = "https://api.openai.com/v1/chat/completions";
+
+  const prompt = user_prompt +
+          ". The output will be in " +
+          rangeNotation +
+          ". An example format of the input in one cell is: " +
+          exampleCellFormat;
+  Browser.msgBox(prompt);
 
   var payload = {
     model: "gpt-4o-mini",
@@ -34,10 +42,7 @@ function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
       },
       {
         role: "user",
-        content:
-          user_prompt +
-          " The output will fall in (range notation): " +
-          rangeNotation,
+        content: prompt,
       },
     ],
     max_tokens: 100,
@@ -46,7 +51,7 @@ function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
   var options = {
     method: "post",
     headers: {
-      Authorization: "Bearer " + apiKey,
+      Authorization: "Bearer " + openai_key,
       "Content-Type": "application/json",
     },
     payload: JSON.stringify(payload),
@@ -115,6 +120,20 @@ function checkFormulaForErrors(formula, range) {
 
 function processMessage(message) {
   message = message.toLowerCase().trim();
+  
+  // Regular expression to match A1 notation (e.g., A1, B2, AA12, etc.)
+  var a1NotationRegex = /[A-Za-z]+[0-9]+/;
+  var exampleCellFormat = "";
+  
+  // Search for A1 notation in the message
+  var match = message.match(a1NotationRegex);
+  if (match) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var cellReference = match[0];
+    // Get the actual value from the referenced cell
+    exampleCellFormat = sheet.getRange(cellReference).getValue();
+  }
+
   // Check if the message is a request to generate a formula.
   var userPrompt = message;
 
@@ -170,7 +189,7 @@ function processMessage(message) {
   var formula = single_cell_formula(
     userPrompt,
     firstCellNotation,
-    cellValuesString
+    exampleCellFormat
   );
 
   if (!formula.startsWith("=")) {
@@ -194,83 +213,6 @@ function processMessage(message) {
   // Autofill the rest of the range
   if (numRows > 1 || numCols > 1) {
     var autofillRange = sheet.getRange(rangeNotation);
-    firstCell.autoFill(
-      autofillRange,
-      SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES
-    );
-  }
-
-  return JSON.stringify({
-    error: false,
-    formula: formula,
-    range: rangeNotation,
-  });
-}
-
-function applyFormulaWithAutofill(rangeNotation, userPrompt) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-
-  // Validate range
-  if (!rangeNotation || rangeNotation.trim() === "") {
-    return "Error: Please enter a valid cell range.";
-  }
-
-  var range;
-  try {
-    range = sheet.getRange(rangeNotation);
-  } catch (e) {
-    return "Error: Invalid range format.";
-  }
-
-  var numRows = range.getNumRows();
-  var numCols = range.getNumColumns();
-
-  if (numRows === 0 || numCols === 0) {
-    return "Error: The selected range is empty.";
-  }
-
-  // Select the first cell in the range
-  var firstCell = range.getCell(1, 1);
-  if (!firstCell) {
-    return "Error: Could not determine the first cell in the range.";
-  }
-
-  var firstCellNotation = firstCell.getA1Notation();
-
-  // Get data from surrounding cells
-  var surroundingData = sheet.getDataRange().getValues();
-  var cellValuesString = surroundingData
-    .map((row) => row.join(", "))
-    .join("; ");
-
-  // Generate the formula using AI
-  var formula = single_cell_formula(
-    userPrompt,
-    firstCellNotation,
-    cellValuesString
-  );
-
-  if (!formula.startsWith("=")) {
-    formula = "=" + formula;
-  }
-
-  // Check formula for errors before applying
-  var errorCheck = checkFormulaForErrors(formula, firstCell);
-  if (errorCheck.hasError) {
-    return JSON.stringify({
-      error: true,
-      formula: formula,
-      errorType: errorCheck.errorType,
-      errorDetails: errorCheck.details,
-    });
-  }
-
-  // Apply formula to the first cell
-  firstCell.setFormula(formula);
-
-  // Autofill the rest of the range
-  if (numRows > 1 || numCols > 1) {
-    var autofillRange = sheet.getRange(firstCellNotation + ":" + rangeNotation);
     firstCell.autoFill(
       autofillRange,
       SpreadsheetApp.AutoFillSeries.DEFAULT_SERIES
@@ -322,7 +264,6 @@ function checkRangeIsEmpty() {
  * @customfunction
  */
 function LEX(query) {
-  var apiKey = ""
   var url = "https://api.openai.com/v1/chat/completions";
   
   var payload = {
@@ -345,7 +286,7 @@ function LEX(query) {
   var options = {
     method: "post",
     headers: {
-      Authorization: "Bearer " + apiKey,
+      Authorization: "Bearer " + openai_key,
       "Content-Type": "application/json",
     },
     payload: JSON.stringify(payload),

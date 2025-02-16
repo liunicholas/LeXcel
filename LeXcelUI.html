@@ -395,7 +395,7 @@
                                     <p style="margin: 0;"><strong>Details:</strong> ${result.errorDetails}</p>
                                 </div>
                                 <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    <button onclick="regenerateFormula('${result.formula}', '${result.errorType}', '${result.errorDetails}')" 
+                                    <button onclick="regenerateFormula('${encodeURIComponent(result.formula)}', '${encodeURIComponent(result.errorType)}', '${encodeURIComponent(result.errorDetails)}')" 
                                         style="
                                           flex: 1;
                                           min-width: 140px;
@@ -411,7 +411,7 @@
                                         ">
                                         Regenerate Formula
                                     </button>
-                                    <button onclick="applyFormulaAnyway('${result.formula}')"
+                                    <button onclick="applyFormulaAnyway('${encodeURIComponent(result.formula)}')"
                                         style="
                                           flex: 1;
                                           min-width: 140px;
@@ -442,11 +442,18 @@
         }
 
         function regenerateFormula(formula, errorType, errorDetails) {
-            const regenerateMessage = `The previous formula which was ${formula} resulted in ${errorType}: ${errorDetails}. Please generate a new formula that avoids this error. Consider using error handling functions or different approaches to achieve the same result.`;
+            // Encode the parameters to handle special characters
+            const encodedFormula = encodeURIComponent(formula);
+            const encodedErrorType = encodeURIComponent(errorType);
+            const encodedErrorDetails = encodeURIComponent(errorDetails);
+
+            const regenerateMessage = `The previous formula "${formula}" resulted in ${errorType}: ${errorDetails}. Please generate a new formula that avoids this error. Consider using error handling functions or different approaches to achieve the same result.`;
             processFinalMessage(regenerateMessage);
         }
 
         function applyFormulaAnyway(formula) {
+            // Encode the formula to handle special characters
+            const encodedFormula = encodeURIComponent(formula);
             const message = `Apply this exact formula without any changes or error checking: ${formula}`;
             processFinalMessage(message);
         }
