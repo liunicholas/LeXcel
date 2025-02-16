@@ -20,7 +20,7 @@ function getSheetData() {
 }
 
 function single_cell_formula(user_prompt, rangeNotation, cellValuesString) {
-  var apiKey =
+  var apiKey = ""
   var url = "https://api.openai.com/v1/chat/completions";
 
   var payload = {
@@ -314,3 +314,65 @@ function checkRangeIsEmpty() {
     rangeNotation: range.getA1Notation(),
   };
 }
+
+/**
+ * Custom function that can be used directly in cells with =LEX("query")
+ * @param {string} query The user's text generation request
+ * @return {Array<Array<string>>} Array of text responses
+ * @customfunction
+ */
+function LEX(query) {
+  var apiKey = ""
+  var url = "https://api.openai.com/v1/chat/completions";
+  
+  var payload = {
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "system",
+        content: "You are a text processing assistant. When given a request, generate the appropriate text output. " +
+                "If the request implies multiple cells or lines, return them as separate items. Keep responses concise and direct. " +
+                "Do not include any formatting instructions like bold or italic. Just return the text."
+      },
+      {
+        role: "user",
+        content: query
+      }
+    ],
+    max_tokens: 1000
+  };
+
+  var options = {
+    method: "post",
+    headers: {
+      Authorization: "Bearer " + apiKey,
+      "Content-Type": "application/json",
+    },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true,
+  };
+
+  var response = UrlFetchApp.fetch("https://api.openai.com/v1/chat/completions", options);
+  var json = JSON.parse(response.getContentText());
+
+  if (json.choices && json.choices.length > 0) {
+    // Split the response into lines
+    var lines = json.choices[0].message.content.trim().split('\n');
+    
+    // Check if the query contains keywords suggesting horizontal layout
+    var wantsHorizontal = query.toLowerCase().includes("horizontal") || 
+                         query.toLowerCase().includes("in a row") ||
+                         query.toLowerCase().includes("across");
+    
+    if (wantsHorizontal) {
+      // Return as a single row
+      return [lines.map(line => line.trim())];
+    } else {
+      // Return as a column (default behavior)
+      return lines.map(line => [line.trim()]);
+    }
+  } else {
+    return [["Error: " + JSON.stringify(json)]];
+  }
+}
+
